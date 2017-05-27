@@ -189,7 +189,6 @@ def work_with_message(receiver):
                         fwd("@", 'blackcastlebot', msg['id'])
                 # Проверяем наличие юзернейма, чтобы не вываливался Exception
                 if 'username' in msg['sender']:
-                    log(msg['sender']['username'])
                     parse_text(msg['text'], msg['sender']['username'], msg['id'])
         except Exception as err:
             log('Ошибка coroutine: {0}'.format(err))
@@ -348,6 +347,7 @@ def parse_text(text, username, message_id):
         elif "На выходе из замка охрана никого не пропускает" in text:
             # send_msg('@', admin_username, "Командир, у нас проблемы с капчой! #captcha " + '|'.join(captcha_answers.keys()))
             # fwd('@', admin_username, message_id)
+            log('Капча попалась')
             action_list.clear()
             bot_enabled = False
             last_captcha_id = message_id
@@ -356,6 +356,7 @@ def parse_text(text, username, message_id):
         elif 'Не умничай!' in text or 'Ты долго думал, аж вспотел от напряжения' in text:
             send_msg('@', admin_username, "Командир, у нас проблемы с капчой! #captcha " + '|'.join(captcha_answers.keys()))
             bot_enabled = False
+            log('Проблемы с капчей')
             if last_captcha_id != 0:
                 fwd('@', admin_username, message_id)
             else:
@@ -369,26 +370,33 @@ def parse_text(text, username, message_id):
 
         elif corovan_enabled and text.find(' /go') != -1:
             action_list.append(orders['corovan'])
+            log('Идем защищать караван')
 
         elif text.find('Ты отправился искать приключения в лес.') != -1:
             hero_state = 'forest'
+            log('Ушли в лес')
             endurance -= 1
 
         elif text.find('Ты отправился искать приключения в пещеру.') != -1:
             hero_state = 'peshera'
+            log('Ушли в пещеру')
             endurance -= 2
 
         elif text.find('Ты встал на защиту КОРОВАНА.') != -1:
             hero_state = 'caravan'
+            log('Встали в защиту каравана')
 
         elif text.find('Ты приготовился к защите') != -1:
             hero_state = 'defence_ready'
+            log('К защите готов')
 
         elif text.find('Ты приготовился к атаке') != -1:
             hero_state = 'attack_ready'
+            log('К атаке готов')
 
         elif text.find('Ты пошел строить:') != -1:
             hero_state = 'building'
+            log('Ушел на стройку')
 
         elif text.find('Ищем соперника.') != -1:
             hero_state = 'arena'
@@ -397,9 +405,11 @@ def parse_text(text, username, message_id):
 
         elif text.find('Слишком мало единиц выносливости.') != -1:
             endurance = 0
+            log('Выносливость кончилась')
             hero_state = 'relax'
 
         elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text):
+            log('Приключения кончились, отдыхаем')
             hero_state = 'relax'
 
         elif text.find('Битва семи замков через') != -1:
@@ -430,19 +440,21 @@ def parse_text(text, username, message_id):
             fwd('@', 'blackcastlebot', message_id)
 
         elif building_enabled and text.find('Ты вернулся со стройки:') != -1 and endurance == 0:
+            log('Вернулись со стройки')
             hero_state = 'relax'
             fwd('@', 'blackcastlebot', message_id)
 
         if quest_fight_enabled and text.find('/fight') != -1:
             c = re.search('(\/fight.*)', text).group(1)
+            log('Идем драться в лес')
             action_list.append(c)
             # заготовка для твинков
             # fwd(pref, msg_receiver, message_id)
             fwd('@', 'blackcastlebot', message_id)
 
         if hero_state == 'relax':
-            if endurance != 0:
-                log('Выносливость осталась, идем на квесты')
+            if quests_available():
+                log('Можно на квест сходить')
                 go_to_quest()
             elif arena_available():
                 log('Можно идти на арену')
@@ -456,6 +468,7 @@ def parse_text(text, username, message_id):
         if hero_state == 'relax' and arena_running:
             arena_running = False
 
+        # TODO после отладки убрать
         log(hero_state)
 
     elif username == 'ChatWarsCaptchaBot':
@@ -728,6 +741,14 @@ def building_available():
     global building_paused
     if building_enabled and not building_paused and hero_state == 'relax':
         return True
+    return False
+
+
+def quests_available():
+    if peshera_enabled or les_enabled:
+        if endurance != 0 and orders['les'] not in action_list and orders['peshera'] not in action_list and hero_state == 'relax':
+            return True
+        return False
     return False
 
 
