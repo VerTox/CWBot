@@ -155,7 +155,7 @@ donate_enabled = False
 quest_fight_enabled = True
 building_enabled = True
 building_paused = False
-tl_build_try = 0
+lt_build_try = 0
 building_target = '/build_hq'
 
 arena_running = False
@@ -204,6 +204,7 @@ def queue_worker():
     global auto_def_enabled
     global donate_enabled
     global gold
+    global building_paused
     # гребаная магия
     print(sender.contacts_search(bot_username))
     print(sender.contacts_search(captcha_bot))
@@ -231,6 +232,9 @@ def queue_worker():
                     log('Донат {0} золота в казну замка'.format(gold - gold_to_left))
                     action_list.append('/donate {0}'.format(gold - gold_to_left))
                 update_order(castle)
+            if building_paused and time() - lt_build_try >= 300:
+                building_paused = False
+                check_activities()
             sleep_time = random.randint(2, 5)
             sleep(sleep_time)
         except Exception as err:
@@ -423,6 +427,7 @@ def parse_text(text, username, message_id):
         elif text.find('В казне недостаточно ресурсов для строительства') != -1:
             log('Нет денег в казне')
             building_paused = True
+            hero_state = 'relax'
             lt_build_try = time()
 
         elif arena_enabled and text.find('выбери точку атаки и точку защиты') != -1:
@@ -453,17 +458,7 @@ def parse_text(text, username, message_id):
             fwd('@', 'blackcastlebot', message_id)
 
         if hero_state == 'relax':
-            if quests_available():
-                log('Можно на квест сходить')
-                go_to_quest()
-            elif arena_available():
-                log('Можно идти на арену')
-                go_to_arena()
-            elif building_available():
-                log('Можно идти на стройку')
-                go_to_building()
-            else:
-                log('В данный момент нечем заняться')
+            check_activities()
 
         if hero_state == 'relax' and arena_running:
             arena_running = False
@@ -697,6 +692,20 @@ def parse_text(text, username, message_id):
                     send_msg('@', admin_username, 'Команда ' + command + ' применена')
                 else:
                     send_msg('@', admin_username, 'Команда ' + command + ' не распознана')
+
+
+def check_activities():
+    if quests_available():
+        log('Можно на квест сходить')
+        go_to_quest()
+    elif arena_available():
+        log('Можно идти на арену')
+        go_to_arena()
+    elif building_available():
+        log('Можно идти на стройку')
+        go_to_building()
+    else:
+        log('В данный момент нечем заняться')
 
 
 def try_parse_status(text):
