@@ -253,17 +253,28 @@ def read_config():
     global building_target
     global building_enabled
     section=str(bot_user_id)
-    bot_enabled=config.getboolean(section, 'bot_enabled')
-    arena_enabled=config.getboolean(section, 'arena_enabled')
-    les_enabled=config.getboolean(section, 'les_enabled')
-    peshera_enabled=config.getboolean(section, 'peshera_enabled')
-    corovan_enabled=config.getboolean(section, 'corovan_enabled')
-    auto_def_enabled=config.getboolean(section, 'auto_def_enabled')
-    donate_enabled=config.getboolean(section, 'donate_enabled')
-    building_enabled = config.getboolean(section, 'building_enabled')
-    building_target = config.get(section, 'building_target')
-    lvl_up=config.get(section, 'lvl_up')
-    quest_fight_enabled=config.getboolean(section, 'quest_fight_enabled')
+    if config.has_option(section,'bot_enabled'):
+        bot_enabled=config.getboolean(section, 'bot_enabled')
+    if config.has_option(section, 'arena_enabled'):
+        arena_enabled=config.getboolean(section, 'arena_enabled')
+    if config.has_option(section, 'les_enabled'):
+        les_enabled=config.getboolean(section, 'les_enabled')
+    if config.has_option(section, 'peshera_enabled'):
+        peshera_enabled=config.getboolean(section, 'peshera_enabled')
+    if config.has_option(section, 'corovan_enabled'):
+        corovan_enabled=config.getboolean(section, 'corovan_enabled')
+    if config.has_option(section, 'auto_def_enabled'):
+        auto_def_enabled=config.getboolean(section, 'auto_def_enabled')
+    if config.has_option(section, 'donate_enabled'):
+        donate_enabled=config.getboolean(section, 'donate_enabled')
+    if config.has_option(section, 'building_enabled'):
+        building_enabled = config.getboolean(section, 'building_enabled')
+    if config.has_option(section, 'building_target'):
+        building_target = config.get(section, 'building_target')
+    if config.has_option(section, 'lvl_up'):
+        lvl_up=config.get(section, 'lvl_up')
+    if config.has_option(section, 'quest_fight_enabled'):
+        quest_fight_enabled=config.getboolean(section, 'quest_fight_enabled')
 
 def write_config():
     global config
