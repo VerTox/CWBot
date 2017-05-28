@@ -444,7 +444,7 @@ def parse_text(text, username, message_id):
             arena_running = False
             fwd('@', 'blackcastlebot', message_id)
 
-        elif building_enabled and text.find('Ты вернулся со стройки:') != -1 and endurance == 0:
+        elif building_enabled and text.find('Ты вернулся со стройки:') != -1:
             log('Вернулись со стройки')
             hero_state = 'relax'
             fwd('@', 'blackcastlebot', message_id)
@@ -748,14 +748,18 @@ def go_to_building():
 def building_available():
     global building_enabled
     global building_paused
+    global hero_state
     if building_enabled and not building_paused and hero_state == 'relax':
+        hero_state = 'building_ready'
         return True
     return False
 
 
 def quests_available():
+    global hero_state
     if peshera_enabled or les_enabled:
         if endurance != 0 and orders['les'] not in action_list and orders['peshera'] not in action_list and hero_state == 'relax':
+            hero_state = 'quest_ready'
             return True
         return False
     return False
@@ -768,9 +772,11 @@ def arena_available():
     global arena_running
     global hero_state
     global tz
+    global hero_state
     if arena_enabled and not arena_delay and gold >= 5 and not arena_running and hero_state == 'relax':
         curhour = datetime.now(tz).hour
         if 9 <= curhour <= 23:
+            hero_state = 'arena_ready'
             return True
         return False
     return False
