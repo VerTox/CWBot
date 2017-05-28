@@ -223,7 +223,7 @@ def queue_worker():
             if len(action_list):
                 log('Отправляем ' + action_list[0])
                 send_msg('@', bot_username, action_list.popleft())
-            if hero_state == 'attack_ready' or hero_state == 'defence_ready':
+            if hero_state == 'attack' or hero_state == 'defence':
                 if after_battle_time():
                     hero_state = 'relax'
                     send_msg('@', bot_username, orders['hero'])
@@ -391,11 +391,11 @@ def parse_text(text, username, message_id):
             log('Встали в защиту каравана')
 
         elif text.find('Ты приготовился к защите') != -1:
-            hero_state = 'defence_ready'
+            hero_state = 'defence'
             log('К защите готов')
 
         elif text.find('Ты приготовился к атаке') != -1:
-            hero_state = 'attack_ready'
+            hero_state = 'attack'
             log('К атаке готов')
 
         elif text.find('Ты пошел строить:') != -1:
@@ -412,6 +412,12 @@ def parse_text(text, username, message_id):
             log('Выносливость кончилась')
             hero_state = 'relax'
 
+        elif text.find('Битва близко.') != -1 and pre_battle_time():
+            if auto_def_enabled:
+                log('Готовимся к защите')
+                update_order(castle)
+            else:
+                log('Приказа защищаться не было, ждем когда кончится битва')
         elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text):
             log('Приключения кончились, отдыхаем')
             hero_state = 'relax'
@@ -442,6 +448,7 @@ def parse_text(text, username, message_id):
         elif text.find('Победил воин') != -1 or text.find('Ничья') != -1:
             log('Выключаем флаг - арена закончилась')
             arena_running = False
+            hero_state = 'relax'
             fwd('@', 'blackcastlebot', message_id)
 
         elif building_enabled and text.find('Ты вернулся со стройки:') != -1:
@@ -457,7 +464,7 @@ def parse_text(text, username, message_id):
             # fwd(pref, msg_receiver, message_id)
             fwd('@', 'blackcastlebot', message_id)
 
-        if hero_state == 'relax':
+        if hero_state == 'relax' or hero_state.find('_ready') != -1:
             check_activities()
 
         if hero_state == 'relax' and arena_running:
@@ -725,9 +732,9 @@ def try_parse_status(text):
     elif re.search('На стройке', text):
         hero_state = 'build'
     elif re.search('Атака на', text):
-        hero_state = 'attack_ready'
+        hero_state = 'attack'
     elif re.search('Защита', text):
-        hero_state = 'defence_ready'
+        hero_state = 'defence'
     else:
         log('Не удалось получить статус')
         send_msg('@', admin_username, 'Что-то пошло не так, не получилось распознать статус')
@@ -783,7 +790,7 @@ def arena_available():
 
 
 def go_to_quest():
-    if peshera_enabled and endurance >= 2 and hero_state == 'relax':
+    if peshera_enabled and endurance >= 2:
         if les_enabled:
             action_list.append(orders['quests'])
             action_list.append(random.choice([orders['peshera'], orders['les']]))
@@ -791,7 +798,7 @@ def go_to_quest():
             action_list.append(orders['quests'])
             action_list.append(orders['peshera'])
 
-    elif les_enabled and not peshera_enabled and endurance >= 1 and orders['les'] not in action_list and hero_state == 'relax':
+    elif les_enabled and not peshera_enabled and endurance >= 1 and orders['les'] not in action_list:
         action_list.append(orders['quests'])
         action_list.append(orders['les'])
 
@@ -831,12 +838,15 @@ def fwd(pref, to, message_id):
 
 
 def update_order(order):
+    global hero_state
     current_order['order'] = order
     current_order['time'] = time()
     if order == castle:
         action_list.append(orders['cover'])
+        hero_state = 'defence'
     else:
         action_list.append(orders['attack'])
+        hero_state = 'attack'
     action_list.append(order)
 
 
