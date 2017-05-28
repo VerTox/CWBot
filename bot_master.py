@@ -371,6 +371,7 @@ def parse_text(text, username, message_id):
             arena_delay_day = datetime.now(tz).day
             log("Отдыхаем денек от арены")
             arena_running = False
+            hero_state = 'relax'
 
         elif corovan_enabled and text.find(' /go') != -1:
             action_list.append(orders['corovan'])
@@ -418,6 +419,7 @@ def parse_text(text, username, message_id):
                 update_order(castle)
             else:
                 log('Приказа защищаться не было, ждем когда кончится битва')
+
         elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text):
             log('Приключения кончились, отдыхаем')
             hero_state = 'relax'
@@ -702,17 +704,20 @@ def parse_text(text, username, message_id):
 
 
 def check_activities():
-    if quests_available():
-        log('Можно на квест сходить')
-        go_to_quest()
-    elif arena_available():
-        log('Можно идти на арену')
-        go_to_arena()
-    elif building_available():
-        log('Можно идти на стройку')
-        go_to_building()
+    if not pre_battle_time() and not after_battle_time():
+        if quests_available():
+            log('Можно на квест сходить')
+            go_to_quest()
+        elif arena_available():
+            log('Можно идти на арену')
+            go_to_arena()
+        elif building_available():
+            log('Можно идти на стройку')
+            go_to_building()
+        else:
+            log('В данный момент нечем заняться')
     else:
-        log('В данный момент нечем заняться')
+        log('Тут вообще-то битва сейчас.')
 
 
 def try_parse_status(text):
