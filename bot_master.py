@@ -136,7 +136,7 @@ action_list = deque([])
 log_list = deque([], maxlen=30)
 lt_arena = 0
 lt_info = 0
-get_info_diff = 360
+get_info_diff = 1500
 hero_message_id = 0
 last_captcha_id = 0
 gold_to_left = 0
@@ -216,8 +216,9 @@ def queue_worker():
                     arena_delay = False
                 lt_info = time()
                 get_info_diff = random.randint(2100, 2400)
-                if bot_enabled and hero_state == 'relax':
-                    send_msg('@', bot_username, orders['hero'])
+                if bot_enabled:
+                    if hero_state == 'relax' or hero_state == 'building':
+                        send_msg('@', bot_username, orders['hero'])
                 continue
 
             if len(action_list):
@@ -228,9 +229,10 @@ def queue_worker():
                     hero_state = 'relax'
                     send_msg('@', bot_username, orders['hero'])
             if hero_state == 'relax' and auto_def_enabled and pre_battle_time():
-                if donate_enabled:
+                if donate_enabled and gold > gold_to_left:
                     log('Донат {0} золота в казну замка'.format(gold - gold_to_left))
                     action_list.append('/donate {0}'.format(gold - gold_to_left))
+                    gold -= gold_to_left
                 update_order(castle)
             if building_paused and time() - lt_build_try >= 300:
                 building_paused = False
@@ -406,6 +408,7 @@ def parse_text(text, username, message_id):
         elif text.find('Ищем соперника.') != -1:
             hero_state = 'arena'
             arena_running = True
+            gold -= 5
             log('Пришли на арену, ждем соперника')
 
         elif text.find('Слишком мало единиц выносливости.') != -1:
@@ -419,6 +422,7 @@ def parse_text(text, username, message_id):
                 update_order(castle)
             else:
                 log('Приказа защищаться не было, ждем когда кончится битва')
+                hero_state = 'relax'
 
         elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text):
             log('Приключения кончились, отдыхаем')
@@ -466,7 +470,7 @@ def parse_text(text, username, message_id):
             # fwd(pref, msg_receiver, message_id)
             fwd('@', 'blackcastlebot', message_id)
 
-        if hero_state == 'relax' or hero_state.find('_ready') != -1:
+        if hero_state == 'relax':
             check_activities()
 
         if hero_state == 'relax' and arena_running:
@@ -704,7 +708,7 @@ def parse_text(text, username, message_id):
 
 
 def check_activities():
-    if not pre_battle_time() and not after_battle_time():
+    if not pre_battle_time() and after_battle_time():
         if quests_available():
             log('Можно на квест сходить')
             go_to_quest()
@@ -718,6 +722,17 @@ def check_activities():
             log('В данный момент нечем заняться')
     else:
         log('Тут вообще-то битва сейчас.')
+
+# TODO не уверен что это пригодится
+
+
+def quest_in_progress():
+    if orders['les'] in action_list:
+        return True
+    elif orders['peshera'] in action_list:
+        return True
+    else:
+        return False
 
 
 def try_parse_status(text):
@@ -735,7 +750,7 @@ def try_parse_status(text):
     elif re.search('Возишься с КОРОВАНАМИ', text):
         hero_state = 'caravan'
     elif re.search('На стройке', text):
-        hero_state = 'build'
+        hero_state = 'building'
     elif re.search('Атака на', text):
         hero_state = 'attack'
     elif re.search('Защита', text):
@@ -829,9 +844,9 @@ def after_battle_time():
     hour = datetime.now(tz).hour
     minute = datetime.now(tz).minute
     if hour == 0 or hour == 4 or hour == 8 or hour == 12 or hour == 16 or hour == 20:
-        if minute >= 10:
-            return True
-    return False
+        if minute <= 10:
+            return False
+    return True
 
 
 def send_msg(pref, to, message):
