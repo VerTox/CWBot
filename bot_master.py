@@ -225,7 +225,7 @@ def queue_worker():
                 log('Отправляем ' + action_list[0])
                 send_msg('@', bot_username, action_list.popleft())
             if hero_state == 'attack' or hero_state == 'defence':
-                if after_battle_time():
+                if after_battle_time() and not pre_battle_time():
                     hero_state = 'relax'
                     send_msg('@', bot_username, orders['hero'])
             if hero_state == 'relax' and auto_def_enabled and pre_battle_time():
@@ -425,6 +425,10 @@ def parse_text(text, username, message_id):
                 hero_state = 'relax'
 
         elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text):
+            if text.find('Ты заработал:'):
+                m = re.search('\d+', text[-20:])
+                if m.group(0):
+                    gold += int(m.group(0))
             log('Приключения кончились, отдыхаем')
             hero_state = 'relax'
 
@@ -489,6 +493,10 @@ def parse_text(text, username, message_id):
     #        c = re.search('(\/fight.*)', text).group(1))
     #        fwd("@", msg_receiver, message_id)
 
+    elif username == 'ChatWarsTradeBot':
+        if text.find('📦Твой склад с материалами:') != -1:
+            fwd('@','PenguindrumStockBot',message_id)
+
     else:
         if username == admin_username:
             if text == '#help':
@@ -511,6 +519,10 @@ def parse_text(text, username, message_id):
                     '#disable_donate - Выключить донат',
                     '#enable_quest_fight - Включить битву во время квестов',
                     '#disable_quest_fight - Выключить битву во время квестов',
+                    '#enable_building - Включить стройку',
+                    '#disable_building - Выключить стройку',
+                    '#build_target - установить цель стройки "/build_hq" например'
+                    '#stock_sum - отправить информацию из трейдбота боту который считает общий сток',
                     "#lvl_atk - качать атаку",
                     "#lvl_def - качать защиту",
                     "#lvl_off - ничего не качать",
@@ -649,8 +661,10 @@ def parse_text(text, username, message_id):
                     '🛡Авто деф включен: {7}',
                     '💰Донат включен: {8}',
                     '🌟Левелап: {9}',
+                    '👷Стройка включена: {10}',
+                    '🛠Цель стройки: {11}'
                 ]).format(bot_enabled, arena_enabled, arena_running, les_enabled, peshera_enabled, corovan_enabled, order_enabled,
-                          auto_def_enabled, donate_enabled, orders[lvl_up]))
+                          auto_def_enabled, donate_enabled, orders[lvl_up], building_enabled, building_target))
 
             # Информация о герое
             elif text == '#hero':
@@ -681,8 +695,8 @@ def parse_text(text, username, message_id):
             elif text == '#get_info_diff':
                 send_msg(pref, msg_receiver, str(get_info_diff))
 
-            elif text == '#stock':
-                action_list.append('/stock')
+            elif text == '#stock_sum':
+                send_msg('@', 'ChatWarsTradeBot', '/start')
 
             elif text.startswith('#build_target'):
                 command = text.split(' ')[1]
@@ -708,6 +722,8 @@ def parse_text(text, username, message_id):
 
 
 def check_activities():
+    sleep_time = random.randint(2, 5)
+    sleep(sleep_time)
     if not pre_battle_time() and after_battle_time():
         if quests_available():
             log('Можно на квест сходить')
@@ -836,7 +852,10 @@ def pre_battle_time():
     if hour == 23 or hour == 3 or hour == 7 or hour == 11 or hour == 15 or hour == 19:
         if minute >= 40:
             return True
-    return False
+        else:
+            return False
+    else:
+        return False
 
 
 def after_battle_time():
@@ -844,9 +863,12 @@ def after_battle_time():
     hour = datetime.now(tz).hour
     minute = datetime.now(tz).minute
     if hour == 0 or hour == 4 or hour == 8 or hour == 12 or hour == 16 or hour == 20:
-        if minute <= 10:
+        if minute > 10:
+            return True
+        else:
             return False
-    return True
+    else:
+        return True
 
 
 def send_msg(pref, to, message):
