@@ -226,8 +226,8 @@ def queue_worker():
                 send_msg('@', bot_username, action_list.popleft())
             if hero_state == 'attack' or hero_state == 'defence':
                 if after_battle_time() and not pre_battle_time():
-                    hero_state = 'relax'
-                    send_msg('@', bot_username, orders['hero'])
+                    #hero_state = 'relax'
+                    send_msg('@', bot_username, '/report')
             if hero_state == 'relax' and auto_def_enabled and pre_battle_time():
                 if donate_enabled and gold > gold_to_left:
                     log('Донат {0} золота в казну замка'.format(gold - gold_to_left))
@@ -312,6 +312,7 @@ def write_config():
     config.set(section, 'quest_fight_enabled', str(quest_fight_enabled))
     with open('./bot_cfg/' + str(bot_user_id) + '.cfg', 'w+') as configfile:
         config.write(configfile)
+
 
 def parse_text(text, username, message_id):
     global lt_arena
@@ -424,11 +425,11 @@ def parse_text(text, username, message_id):
                 log('Приказа защищаться не было, ждем когда кончится битва')
                 hero_state = 'relax'
 
-        elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text):
-            if text.find('Ты заработал:'):
-                m = re.search('\d+', text[-20:])
-                if m.group(0):
-                    gold += int(m.group(0))
+        elif text.find('Ты задержал') != -1 or text.find('Ты упустил') != -1 or text.find('Ты пытался остановить') != -1 or text.find('Слишком поздно, событие не актуально.') != -1 or text.find('Ветер завывает') != -1 or text.find('Ты заработал:') != -1 or forest_end(text) or peshera_end(text):
+            #if text.find('Ты заработал:'):
+            #    m = re.search('\d+', text[-20:])
+            #    if m.group(0):
+            #        gold += int(m.group(0))
             log('Приключения кончились, отдыхаем')
             hero_state = 'relax'
 
@@ -466,6 +467,13 @@ def parse_text(text, username, message_id):
             hero_state = 'relax'
             fwd('@', 'blackcastlebot', message_id)
 
+        elif text.find('Твои результаты в бою:') != -1:
+            log('Получили результаты битвы')
+            if hero_state == 'attack' or hero_state == 'defence':
+                if after_battle_time() and not pre_battle_time():
+                    hero_state = 'relax'
+            fwd('@', 'blackcastlebot', message_id)
+
         if quest_fight_enabled and text.find('/fight') != -1:
             c = re.search('(\/fight.*)', text).group(1)
             log('Идем драться в лес')
@@ -495,7 +503,11 @@ def parse_text(text, username, message_id):
 
     elif username == 'ChatWarsTradeBot':
         if text.find('📦Твой склад с материалами:') != -1:
-            fwd('@','PenguindrumStockBot',message_id)
+            fwd('@', 'PenguindrumStockBot', message_id)
+
+    elif username == 'blackcastlebot' and pre_battle_time():
+        if text in orders:
+            update_order(orders[text])
 
     else:
         if username == admin_username:
@@ -701,6 +713,7 @@ def parse_text(text, username, message_id):
             elif text.startswith('#build_target'):
                 command = text.split(' ')[1]
                 building_target = command
+                write_config()
                 send_msg(pref, msg_receiver, 'Новая цель строительства: "' + command + '" установлена')
 
             elif text.startswith('#push_order'):
@@ -845,6 +858,12 @@ def forest_end(text):
     return False
 
 
+def peshera_end(text):
+    if text.find('Они оказались очень агрессивными.') != -1 or text.find('Пришлось выбираться из пещеры.') != -1 or text.find('Тебя завалило известняком,') != -1 or text.find('Наверное лучше развернуться и уйти. ') != -1 or text.find('Их было слишком много') != -1:
+        return True
+    return False
+
+
 def pre_battle_time():
     global tz
     hour = datetime.now(tz).hour
@@ -863,7 +882,7 @@ def after_battle_time():
     hour = datetime.now(tz).hour
     minute = datetime.now(tz).minute
     if hour == 0 or hour == 4 or hour == 8 or hour == 12 or hour == 16 or hour == 20:
-        if minute > 10:
+        if minute > 4:
             return True
         else:
             return False
