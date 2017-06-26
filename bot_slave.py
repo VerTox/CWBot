@@ -37,7 +37,7 @@ host = 'localhost'
 port = 1338
 
 # включить прокачку при левелапе
-lvl_up = 'lvl_off'
+lvl_up = 'lvl_def'
 
 # имя группы
 group_name = ''
@@ -174,6 +174,7 @@ tz = pytz.timezone('Europe/Moscow')
 def work_with_message(receiver):
     global bot_user_id
     global castle_name
+    global building_enabled
     while True:
         msg = (yield)
         try:
@@ -190,18 +191,11 @@ def work_with_message(receiver):
                         log('Конфиг не найден')
                         write_config()
                         log('Новый конфиг создан')
-                # Если твинкоботы просят помощи, форвардим в черный замок
-                if group_name != '' and castle_name == 'black':
-                    if msg['peer']['name'] == group_name and msg['text'].find('/fight') != -1:
-                        fwd("@", 'blackcastlebot', msg['id'])
                 # Проверяем наличие юзернейма, чтобы не вываливался Exception
+                if castle_name != 'black' and building_enabled:
+                    building_enabled = False
                 if 'username' in msg['sender']:
                     parse_text(msg['text'], msg['sender']['username'], msg['id'])
-            # дичайший костыль для получения приказов, форвардим боту, который отвечает тем же сообщением
-            # что и ты ему написал, тем самым отрывает от сообщения всякие кнопки.
-            # Если что, мне стыдно за такое решение
-            elif msg['event'] == 'message' and msg['sender']['username'] == 'blackcastlebot':
-                fwd('@', 'cwstockbot', msg['id'])
         except Exception as err:
             log('Ошибка coroutine: {0}'.format(err))
 
@@ -472,27 +466,22 @@ def parse_text(text, username, message_id):
             log('Выключаем флаг - арена закончилась')
             arena_running = False
             hero_state = 'relax'
-            fwd('@', 'blackcastlebot', message_id)
 
         elif building_enabled and text.find('Ты вернулся со стройки:') != -1:
             log('Вернулись со стройки')
             hero_state = 'relax'
-            fwd('@', 'blackcastlebot', message_id)
 
         elif text.find('Твои результаты в бою:') != -1:
             log('Получили результаты битвы')
             if hero_state == 'attack' or hero_state == 'defence':
                 if after_battle_time() and not pre_battle_time():
                     hero_state = 'relax'
-            fwd('@', 'blackcastlebot', message_id)
 
         if quest_fight_enabled and text.find('/fight') != -1:
             c = re.search('(\/fight.*)', text).group(1)
             log('Идем драться в лес')
             action_list.append(c)
-            # заготовка для твинков
-            # fwd(pref, msg_receiver, message_id)
-            fwd('@', 'blackcastlebot', message_id)
+            fwd(pref, msg_receiver, message_id)
 
         if hero_state == 'relax':
             check_activities()
