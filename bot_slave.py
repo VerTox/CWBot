@@ -362,7 +362,8 @@ def parse_text(text, username, message_id):
         if text.find('Определись со специализацией') != -1:
             log('Можно учиться')
             action_list.append('/class')
-            action_list.append(orders[study])
+            action_list.append(orders['study'])
+			action_list.append(orders['hero'])
 
         elif "На выходе из замка охрана никого не пропускает" in text:
             # send_msg('@', admin_username, "Командир, у нас проблемы с капчой! #captcha " + '|'.join(captcha_answers.keys()))

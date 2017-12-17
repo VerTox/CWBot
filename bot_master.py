@@ -106,7 +106,10 @@ orders = {
     'sell': 'Скупка предметов',
     'lvl_def': '+1 🛡Защита',
     'lvl_atk': '+1 ⚔️Атака',
-    'lvl_off': 'Выключен'
+    'lvl_off': 'Выключен',
+	'pet_play': '⚽Поиграть',
+    'pet_feed': '🍼Покормить',
+    'pet_wash': '🛁Почистить'
 }
 
 captcha_answers = {
@@ -123,6 +126,21 @@ captcha_answers = {
     'cat': '🐈',
     'pig': '🐖',
     'squirrel': '🐿'
+}
+
+pet_states = {
+    '😁': 'perfect',
+    '😃': 'good',
+    '😐': 'med',
+    '😢': 'bad'
+}
+
+pet_char_states = {
+    'отлично!': 5,
+    'хорошо': 4,
+    'удовлетворительно': 3,
+    'плохо': 2,
+    'очень плохо': 1
 }
 
 arena_cover = ['🛡головы', '🛡корпуса', '🛡ног']
@@ -453,8 +471,16 @@ def parse_text(text, username, message_id):
             gold = int(re.search('💰([0-9]+)', text).group(1))
             endurance = int(re.search('Выносливость: ([0-9]+)', text).group(1))
             log('Золото: {0}, выносливость: {1}'.format(gold, endurance))
+			pet_state = 'no_pet'
+			if re.search('Помощник:', text) is not None:
+                # жевотне обнаружено
+                pet_state = pet_states[re.search('Помощник:\n.+\(.+\) (.+) /pet', text).group(1)]
 
-        elif text.find('В казне недостаточно ресурсов для строительства') != -1:
+        elif re.search('Помощник:', text) is not None and pet_state == 'med' or pet_state == 'bad': 
+            log('Идем проверить питомца')
+            action_list.append('/pet')
+		
+		elif text.find('В казне недостаточно ресурсов для строительства') != -1:
             log('Нет денег в казне')
             building_paused = True
             hero_state = 'relax'
@@ -496,7 +522,10 @@ def parse_text(text, username, message_id):
             fwd('@', 'BlackCastleBot', message_id)
 
         if hero_state == 'relax':
+		    if text.find('Запас еды:') != -1:
+				check_pet()
             check_activities()
+			
 
         if hero_state == 'relax' and arena_running:
             arena_running = False
@@ -765,6 +794,21 @@ def check_activities():
             log('В данный момент нечем заняться')
     else:
         log('Тут вообще-то битва сейчас.')
+
+def check_pet():
+        play_state = pet_char_states[re.search('⚽ (.+)', text).group(1)]
+        food_state = pet_char_states[re.search('🍼 (.+)', text).group(1)]
+        wash_state = pet_char_states[re.search('🛁 (.+)', text).group(1)]
+        food_rest = int(re.search('Запас еды: (\d+)', text).group(1))
+        log('⚽️{0} 🍼{1} 🛁{2} Запас еды {3}'.format(play_state, food_state, wash_state, food_rest))
+        if food_rest <= 2:
+            ifttt('pet_food', food_rest, None)
+        if play_state <= 4:
+            action_list.append(orders['pet_play'])
+        if food_state <= 3 and food_rest != 0:
+            action_list.append(orders['pet_feed'])
+        if wash_state <= 4:
+            action_list.append(orders['pet_wash'])
 
 # TODO не уверен что это пригодится
 
