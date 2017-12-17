@@ -480,7 +480,7 @@ def parse_text(text, username, message_id):
             log('Идем проверить питомца')
             action_list.append('/pet')
 		
-		elif text.find('В казне недостаточно ресурсов для строительства') != -1:
+        elif text.find('В казне недостаточно ресурсов для строительства') != -1:
             log('Нет денег в казне')
             building_paused = True
             hero_state = 'relax'
