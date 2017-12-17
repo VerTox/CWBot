@@ -471,8 +471,8 @@ def parse_text(text, username, message_id):
             gold = int(re.search('💰([0-9]+)', text).group(1))
             endurance = int(re.search('Выносливость: ([0-9]+)', text).group(1))
             log('Золото: {0}, выносливость: {1}'.format(gold, endurance))
-			pet_state = 'no_pet'
-			if re.search('Помощник:', text) is not None:
+            pet_state = 'no_pet'
+            if re.search('Помощник:', text) is not None:
                 # жевотне обнаружено
                 pet_state = pet_states[re.search('Помощник:\n.+\(.+\) (.+) /pet', text).group(1)]
 
