@@ -359,7 +359,7 @@ def parse_text(text, username, message_id):
             action_list.append('/level_up')
             action_list.append(orders[lvl_up])
 			
-		if text.find('Определись со специализацией') != -1:
+        if text.find('Определись со специализацией') != -1:
             log('Можно учиться')
             action_list.append('/class')
             action_list.append(orders[study])
