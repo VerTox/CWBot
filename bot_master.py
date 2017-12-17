@@ -91,8 +91,9 @@ orders = {
     'les': '🌲Лес',
     'gorni_fort': '⛰Горный форт',
     'gora': '⛰',
-    'cover': '🛡 Защита',
-    'attack': '⚔ Атака',
+    'morskoy_fort': '⚓️Морской форт',
+    'cover': '🛡Защита',
+    'attack': '⚔Атака',
     'cover_symbol': '🛡',
     'hero': '🏅Герой',
     'corovan': '/go',
@@ -193,14 +194,14 @@ def work_with_message(receiver):
                 # Если твинкоботы просят помощи, форвардим в черный замок
                 if group_name != '' and castle_name == 'black':
                     if msg['peer']['name'] == group_name and msg['text'].find('/fight') != -1:
-                        fwd("@", 'blackcastlebot', msg['id'])
+                        fwd("@", 'BlackCastleBot', msg['id'])
                 # Проверяем наличие юзернейма, чтобы не вываливался Exception
                 if 'username' in msg['sender']:
                     parse_text(msg['text'], msg['sender']['username'], msg['id'])
             # дичайший костыль для получения приказов, форвардим боту, который отвечает тем же сообщением
             # что и ты ему написал, тем самым отрывает от сообщения всякие кнопки.
             # Если что, мне стыдно за такое решение
-            elif msg['event'] == 'message' and msg['sender']['username'] == 'blackcastlebot':
+            elif msg['event'] == 'message' and msg['sender']['username'] == 'BlackCastleBot':
                 fwd('@', 'cwstockbot', msg['id'])
         except Exception as err:
             log('Ошибка coroutine: {0}'.format(err))
@@ -468,23 +469,23 @@ def parse_text(text, username, message_id):
             action_list.append(attack_chosen)
             action_list.append(cover_chosen)
 
-        elif text.find('Победил воин') != -1 or text.find('Ничья') != -1:
+        elif text.find('Таблица победителей обновлена') != -1 or text.find('Ничья') != -1:
             log('Выключаем флаг - арена закончилась')
             arena_running = False
             hero_state = 'relax'
-            fwd('@', 'blackcastlebot', message_id)
+            fwd('@', 'BlackCastleBot', message_id)
 
         elif building_enabled and text.find('Ты вернулся со стройки:') != -1:
             log('Вернулись со стройки')
             hero_state = 'relax'
-            fwd('@', 'blackcastlebot', message_id)
+            fwd('@', 'BlackCastleBot', message_id)
 
         elif text.find('Твои результаты в бою:') != -1:
             log('Получили результаты битвы')
             if hero_state == 'attack' or hero_state == 'defence':
                 if after_battle_time() and not pre_battle_time():
                     hero_state = 'relax'
-            fwd('@', 'blackcastlebot', message_id)
+            fwd('@', 'BlackCastleBot', message_id)
 
         if quest_fight_enabled and text.find('/fight') != -1:
             c = re.search('(\/fight.*)', text).group(1)
@@ -492,7 +493,7 @@ def parse_text(text, username, message_id):
             action_list.append(c)
             # заготовка для твинков
             # fwd(pref, msg_receiver, message_id)
-            fwd('@', 'blackcastlebot', message_id)
+            fwd('@', 'BlackCastleBot', message_id)
 
         if hero_state == 'relax':
             check_activities()
@@ -515,7 +516,7 @@ def parse_text(text, username, message_id):
 
     elif username == 'ChatWarsTradeBot':
         if text.find('📦Твой склад с материалами:') != -1:
-            fwd('@', 'PenguindrumStockBot', message_id)
+            fwd('@', 'enotobot', message_id)
 
     elif username == 'cwstockbot' and pre_battle_time():
         if text in orders:
@@ -787,6 +788,8 @@ def try_parse_status(text):
         hero_state = 'arena'
     elif re.search('В пещере', text):
         hero_state = 'cave'
+    elif re.search('На побережье.', text):
+        hero_state = 'beach'
     elif re.search('Пьешь в таверне', text):
         hero_state = 'tavern'
     elif re.search('Возишься с КОРОВАНАМИ', text):

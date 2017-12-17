@@ -91,8 +91,9 @@ orders = {
     'les': '🌲Лес',
     'gorni_fort': '⛰Горный форт',
     'gora': '⛰',
-    'cover': '🛡 Защита',
-    'attack': '⚔ Атака',
+    'morskoy_fort': '⚓️Морской форт',
+    'cover': '🛡Защита',
+    'attack': '⚔️Атака',
     'cover_symbol': '🛡',
     'hero': '🏅Герой',
     'corovan': '/go',
@@ -105,7 +106,8 @@ orders = {
     'sell': 'Скупка предметов',
     'lvl_def': '+1 🛡Защита',
     'lvl_atk': '+1 ⚔️Атака',
-    'lvl_off': 'Выключен'
+    'lvl_off': 'Выключен',
+	'study': '📚 Обучение'
 }
 
 captcha_answers = {
@@ -356,6 +358,11 @@ def parse_text(text, username, message_id):
             log('получили уровень - {0}'.format(orders[lvl_up]))
             action_list.append('/level_up')
             action_list.append(orders[lvl_up])
+			
+		if text.find('Определись со специализацией') != -1:
+            log('Можно учиться')
+            action_list.append('/class')
+            action_list.append(orders[study])
 
         elif "На выходе из замка охрана никого не пропускает" in text:
             # send_msg('@', admin_username, "Командир, у нас проблемы с капчой! #captcha " + '|'.join(captcha_answers.keys()))
@@ -462,7 +469,7 @@ def parse_text(text, username, message_id):
             action_list.append(attack_chosen)
             action_list.append(cover_chosen)
 
-        elif text.find('Победил воин') != -1 or text.find('Ничья') != -1:
+        elif text.find('одержал победу') != -1 or text.find('Ничья') != -1:
             log('Выключаем флаг - арена закончилась')
             arena_running = False
             hero_state = 'relax'
@@ -476,6 +483,9 @@ def parse_text(text, username, message_id):
             if hero_state == 'attack' or hero_state == 'defence':
                 if after_battle_time() and not pre_battle_time():
                     hero_state = 'relax'
+
+        elif text.find('Выносливость восстановлена: ты полон сил. Вперед, на поиски приключений!') != -1:
+            send_msg('@', bot_username, orders['hero'])
 
         if quest_fight_enabled and text.find('/fight') != -1:
             c = re.search('(\/fight.*)', text).group(1)
@@ -504,7 +514,7 @@ def parse_text(text, username, message_id):
 
     elif username == 'ChatWarsTradeBot':
         if text.find('📦Твой склад с материалами:') != -1:
-            fwd('@', 'PenguindrumStockBot', message_id)
+            fwd('@', 'enotobot', message_id)
 
     elif username == 'cwstockbot' and pre_battle_time():
         if text in orders:
@@ -776,6 +786,8 @@ def try_parse_status(text):
         hero_state = 'arena'
     elif re.search('В пещере', text):
         hero_state = 'cave'
+    elif re.search('На побережье.', text):
+        hero_state = 'beach'
     elif re.search('Пьешь в таверне', text):
         hero_state = 'tavern'
     elif re.search('Возишься с КОРОВАНАМИ', text):
