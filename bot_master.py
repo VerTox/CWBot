@@ -522,8 +522,8 @@ def parse_text(text, username, message_id):
             fwd('@', 'BlackCastleBot', message_id)
 
         if hero_state == 'relax':
-		    if text.find('Запас еды:') != -1:
-				check_pet(text)
+            if text.find('Запас еды:') != -1:
+                check_pet(text)
             check_activities()
 			
 
