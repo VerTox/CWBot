@@ -523,7 +523,7 @@ def parse_text(text, username, message_id):
 
         if hero_state == 'relax':
 		    if text.find('Запас еды:') != -1:
-				check_pet()
+				check_pet(text)
             check_activities()
 			
 
@@ -795,14 +795,12 @@ def check_activities():
     else:
         log('Тут вообще-то битва сейчас.')
 
-def check_pet():
+def check_pet(text):
         play_state = pet_char_states[re.search('⚽ (.+)', text).group(1)]
         food_state = pet_char_states[re.search('🍼 (.+)', text).group(1)]
         wash_state = pet_char_states[re.search('🛁 (.+)', text).group(1)]
         food_rest = int(re.search('Запас еды: (\d+)', text).group(1))
         log('⚽️{0} 🍼{1} 🛁{2} Запас еды {3}'.format(play_state, food_state, wash_state, food_rest))
-        if food_rest <= 2:
-            ifttt('pet_food', food_rest, None)
         if play_state <= 4:
             action_list.append(orders['pet_play'])
         if food_state <= 3 and food_rest != 0:
