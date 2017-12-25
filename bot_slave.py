@@ -99,6 +99,7 @@ orders = {
     'corovan': '/go',
     'peshera': '🕸Пещера',
     'quests': '🗺 Квесты',
+    'snowballs': '❄️Снежки',
     'castle_menu': '🏰Замок',
     'lavka': '🏚Лавка',
     'snaraga': 'Снаряжение',
@@ -107,7 +108,7 @@ orders = {
     'lvl_def': '+1 🛡Защита',
     'lvl_atk': '+1 ⚔️Атака',
     'lvl_off': 'Выключен',
-	'study': '📚 Обучение'
+    'study': '📚 Обучение'
 }
 
 captcha_answers = {
@@ -128,6 +129,8 @@ captcha_answers = {
 
 arena_cover = ['🛡головы', '🛡корпуса', '🛡ног']
 arena_attack = ['🗡в голову', '🗡по корпусу', '🗡по ногам']
+snowball_cover = ['🙈За снеговиком', '🙈В сугробе', '🙈У дерева']
+snowball_attack = ['🎯За снеговика', '🎯В сугроб', '🎯К дереву']
 # поменять blue на red, black, white, yellow в зависимости от вашего замка
 castle = orders[castle_name]
 # текущий приказ на атаку/защиту, по умолчанию всегда защита, трогать не нужно
@@ -166,11 +169,14 @@ building_enabled = True
 building_paused = False
 lt_build_try = 0
 building_target = '/build_hq'
+snowball_enabled = True
 
 arena_running = False
 arena_delay = False
 arena_delay_day = -1
 tz = pytz.timezone('Europe/Moscow')
+night_time = False
+snowball_running = False
 
 @coroutine
 def work_with_message(receiver):
@@ -227,6 +233,7 @@ def queue_worker():
                 if bot_enabled:
                     if hero_state == 'relax' or hero_state == 'building':
                         send_msg('@', bot_username, orders['hero'])
+                        send_msg('@', bot_username, orders['castle_menu'])
                 continue
 
             if len(action_list):
@@ -265,6 +272,7 @@ def read_config():
     global quest_fight_enabled
     global building_target
     global building_enabled
+    global snowball_enabled
     section=str(bot_user_id)
     if config.has_option(section,'bot_enabled'):
         bot_enabled=config.getboolean(section, 'bot_enabled')
@@ -282,6 +290,8 @@ def read_config():
         donate_enabled=config.getboolean(section, 'donate_enabled')
     if config.has_option(section, 'building_enabled'):
         building_enabled = config.getboolean(section, 'building_enabled')
+    if config.has_option(section, 'snowball_enabled'):
+        snowball_enabled = config.getboolean(section, 'snowball_enabled')
     if config.has_option(section, 'building_target'):
         building_target = config.get(section, 'building_target')
     if config.has_option(section, 'lvl_up'):
@@ -303,6 +313,7 @@ def write_config():
     global quest_fight_enabled
     global building_target
     global building_enabled
+    global snowball_enabled
     section = str(bot_user_id)
     if config.has_section(section):
         config.remove_section(section)
@@ -316,6 +327,7 @@ def write_config():
     config.set(section, 'donate_enabled', str(donate_enabled))
     config.set(section, 'lvl_up', str(lvl_up))
     config.set(section, 'building_enabled', str(building_enabled))
+    config.set(section, 'snowball_enabled', str(snowball_enabled))
     config.set(section, 'building_target', str(building_target))
     config.set(section, 'quest_fight_enabled', str(quest_fight_enabled))
     with open('./bot_cfg/' + str(bot_user_id) + '.cfg', 'w+') as configfile:
@@ -331,6 +343,7 @@ def parse_text(text, username, message_id):
     global les_enabled
     global peshera_enabled
     global corovan_enabled
+    global snowball_enabled
     global order_enabled
     global auto_def_enabled
     global donate_enabled
@@ -351,6 +364,8 @@ def parse_text(text, username, message_id):
     global hero_state
     global gold
     global action_list
+    global night_time
+    global snowball_running
     if bot_enabled and username == bot_username:
         log('Получили сообщение от бота. Проверяем условия')
 
@@ -358,12 +373,12 @@ def parse_text(text, username, message_id):
             log('получили уровень - {0}'.format(orders[lvl_up]))
             action_list.append('/level_up')
             action_list.append(orders[lvl_up])
-			
+
         if text.find('Определись со специализацией') != -1:
             log('Можно учиться')
             action_list.append('/class')
             action_list.append(orders['study'])
-			action_list.append(orders['hero'])
+            action_list.append(orders['hero'])
 
         elif "На выходе из замка охрана никого не пропускает" in text:
             # send_msg('@', admin_username, "Командир, у нас проблемы с капчой! #captcha " + '|'.join(captcha_answers.keys()))
@@ -426,6 +441,14 @@ def parse_text(text, username, message_id):
             gold -= 5
             log('Пришли на арену, ждем соперника')
 
+        elif text.find('Ночью соперника особо не разглядеть. Дождись утра.') != -1:
+            night_time = True
+
+        elif text.find('Ты вышел во двор и ищешь, с кем сыграть.') != -1:
+            hero_state = 'snowball'
+            snowball_running = True
+            log('Вышли во двор, ждем соперника')
+
         elif text.find('Слишком мало единиц выносливости.') != -1:
             endurance = 0
             log('Выносливость кончилась')
@@ -470,9 +493,22 @@ def parse_text(text, username, message_id):
             action_list.append(attack_chosen)
             action_list.append(cover_chosen)
 
-        elif text.find('одержал победу') != -1 or text.find('Ничья') != -1:
+        elif snowball_enabled and text.find('где спрятаться и куда кидать снежок') != -1:
+            snowball_running = True
+            attack_chosen = snowball_attack[random.randint(0, 2)]
+            cover_chosen = snowball_cover[random.randint(0, 2)]
+            log('Атака: {0}, Защита: {1}'.format(attack_chosen, cover_chosen))
+            action_list.append(attack_chosen)
+            action_list.append(cover_chosen)
+
+        elif text.find('Таблица победителей обновлена') != -1 or text.find('Ничья') != -1:
             log('Выключаем флаг - арена закончилась')
             arena_running = False
+            hero_state = 'relax'
+
+        elif text.find('Рейтинг победителей обновлён:') != -1 or text.find('Ничья') != -1:
+            log('Выключаем флаг - игра в снежки кончилась')
+            snowball_running = False
             hero_state = 'relax'
 
         elif building_enabled and text.find('Ты вернулся со стройки:') != -1:
@@ -484,6 +520,12 @@ def parse_text(text, username, message_id):
             if hero_state == 'attack' or hero_state == 'defence':
                 if after_battle_time() and not pre_battle_time():
                     hero_state = 'relax'
+
+        elif text.find('Казна замка:') != -1:
+            if text.find('Ночь') != -1:
+                night_time = True
+            else:
+                night_time = False
 
         elif text.find('Выносливость восстановлена: ты полон сил. Вперед, на поиски приключений!') != -1:
             send_msg('@', bot_username, orders['hero'])
@@ -591,6 +633,16 @@ def parse_text(text, username, message_id):
                 les_enabled = False
                 write_config()
                 send_msg(pref, msg_receiver, 'Лес успешно выключен')
+
+            # Вкл/выкл снежков
+            elif text == '#enable_snowball':
+                snowball_enabled = True
+                write_config()
+                send_msg(pref, msg_receiver, 'Снежки успешно включены')
+            elif text == '#disable_snowball':
+                snowball_enabled = False
+                write_config()
+                send_msg(pref, msg_receiver, 'Снежки успешно выключены')
 
             # Вкл/выкл пещеры
             elif text == '#enable_peshera':
@@ -760,6 +812,9 @@ def check_activities():
         elif building_available():
             log('Можно идти на стройку')
             go_to_building()
+        elif snowball_available():
+            log('Можно играть в снежки')
+            go_to_snowball()
         else:
             log('В данный момент нечем заняться')
     else:
@@ -815,6 +870,10 @@ def go_to_building():
     log('Идём на стройку')
     action_list.append(building_target)
 
+def go_to_snowball():
+    log('Идём играть в снежки')
+    action_list.append(orders['quests'])
+    action_list.append(orders['snowballs'])
 
 def building_available():
     global building_enabled
@@ -825,6 +884,14 @@ def building_available():
         return True
     return False
 
+def snowball_available():
+    global snowball_enabled
+    global night_time
+    global hero_state
+    if snowball_enabled and not night_time and hero_state == 'relax':
+        hero_state = 'snowball_ready'
+        return True
+    return False
 
 def quests_available():
     global hero_state
