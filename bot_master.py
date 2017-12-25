@@ -898,6 +898,8 @@ def try_parse_status(text):
         hero_state = 'attack'
     elif re.search('Защита', text):
         hero_state = 'defence'
+    elif re.search('❄️Бросаешь снежки', text):
+        hero_state = 'snowballs'
     else:
         log('Не удалось получить статус')
         send_msg('@', admin_username, 'Что-то пошло не так, не получилось распознать статус')
