@@ -459,6 +459,9 @@ def parse_text(text, username, message_id):
             gold -= 5
             log('Пришли на арену, ждем соперника')
 
+        elif text.find('Ночью соперника особо не разглядеть. Дождись утра.') != -1:
+            night_time = True
+
         elif text.find('Ты вышел во двор и ищешь, с кем сыграть.') != -1:
             hero_state = 'snowball'
             snowball_running = True
