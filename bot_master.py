@@ -255,8 +255,8 @@ def queue_worker():
                 get_info_diff = random.randint(2100, 2400)
                 if bot_enabled:
                     if hero_state == 'relax' or hero_state == 'building':
-                        send_msg('@', bot_username, orders['hero'])
-                        send_msg('@', bot_username, orders['castle_menu'])
+                        action_list.append(orders['hero'])
+                        action_list.append(orders['castle_menu'])
                 continue
 
             if len(action_list):
@@ -461,6 +461,7 @@ def parse_text(text, username, message_id):
 
         elif text.find('Ночью соперника особо не разглядеть. Дождись утра.') != -1:
             night_time = True
+            log('Ой, а сейчас ночь, в снежки не поиграть')
 
         elif text.find('Ты вышел во двор и ищешь, с кем сыграть.') != -1:
             hero_state = 'snowball'
@@ -499,11 +500,10 @@ def parse_text(text, username, message_id):
             if re.search('Помощник:', text) is not None:
                 # жевотне обнаружено
                 pet_state = pet_states[re.search('Помощник:\n.+\(.+\) (.+) /pet', text).group(1)]
+            if pet_state == 'med' or pet_state == 'bad':
+                log('Идем проверить питомца')
+                action_list.append('/pet')
 
-        elif re.search('Помощник:', text) is not None and pet_state == 'med' or pet_state == 'bad': 
-            log('Идем проверить питомца')
-            action_list.append('/pet')
-		
         elif text.find('В казне недостаточно ресурсов для строительства') != -1:
             log('Нет денег в казне')
             building_paused = True
@@ -574,7 +574,7 @@ def parse_text(text, username, message_id):
             arena_running = False
 
         # TODO после отладки убрать
-        log(hero_state)
+        #log(hero_state)
 
     elif username == 'ChatWarsCaptchaBot':
         if len(text) <= 4 and text in captcha_answers.values():
