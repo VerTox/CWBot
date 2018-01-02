@@ -443,6 +443,8 @@ def parse_text(text, username, message_id):
 
         elif text.find('Ночью соперника особо не разглядеть. Дождись утра.') != -1:
             night_time = True
+            hero_state = relax
+            action_list.append(orders['hero'])
             log('Ой, а сейчас ночь, в снежки не поиграть')
 
         elif text.find('Ты вышел во двор и ищешь, с кем сыграть.') != -1:
